@@ -19,7 +19,6 @@ jobs:
   publish:
     name: Build and publish Javadoc
     runs-on: ubuntu-latest
-    container: wpilib/systemcore-cross-ubuntu:2027-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
