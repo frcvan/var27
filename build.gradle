@@ -136,7 +136,13 @@ def vendorDependencyCoordinates = fileTree('vendordeps')
         }
 
 def resolveJavadocDependencySources = {
-    def coordinates = vendorDependencyCoordinates
+    def wpilibDependencyCoordinates = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts
+            .findAll { it.moduleVersion.id.group.startsWith('org.wpilib.') }
+            .collect { artifact ->
+                def module = artifact.moduleVersion.id
+                "${module.group}:${module.name}:${module.version}"
+            }
+    def coordinates = (vendorDependencyCoordinates + wpilibDependencyCoordinates).unique()
     def requestedArtifacts = coordinates.collect {
         def dependency = dependencies.create("${it}:sources@jar")
         dependency.transitive = false
@@ -153,6 +159,7 @@ tasks.named('javadoc', Javadoc) {
     classpath = files(sourceSets.main.runtimeClasspath, configurations.annotationProcessor)
     destinationDir = layout.buildDirectory.dir('docs/javadoc').get().asFile
     options.addBooleanOption('Xdoclint:none', true)
+    options.bottom = "<a href='https://teamvan.org'>Team V.A.N.</a>"
     doFirst {
         def javadocDependencySources = resolveJavadocDependencySources()
         source = files(sourceSets.main.allJava, javadocDependencySources.collect {
