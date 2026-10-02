@@ -16,7 +16,7 @@ repositories {
     gradlePluginPortal()
 }
 
-def ROBOT_MAIN_CLASS = "first.Main"
+def ROBOT_MAIN_CLASS = "van.robot.Main"
 
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
@@ -169,7 +169,7 @@ tasks.named('javadoc', Javadoc) {
 project.compileJava.dependsOn(createVersionFile)
 gversion {
     srcDir       = "src/main/java/"
-    classPackage = "first.robot"
+    classPackage = "van.robot"
     className    = "BuildConstants"
     dateFormat   = "yyyy-MM-dd HH:mm:ss z"
     timeZone     = "America/New_York"
