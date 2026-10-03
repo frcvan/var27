@@ -106,7 +106,7 @@ test {
 // The sim GUI is *disabled* by default to support running
 // AdvantageKit log replay, which requires that all HAL
 // sim extensions be disabled.
-wpi.sim.addGui().defaultEnabled = false
+wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
 
 application.mainClass = ROBOT_MAIN_CLASS
@@ -158,6 +158,7 @@ def resolveJavadocDependencySources = {
 tasks.named('javadoc', Javadoc) {
     classpath = files(sourceSets.main.runtimeClasspath, configurations.annotationProcessor)
     destinationDir = layout.buildDirectory.dir('docs/javadoc').get().asFile
+    options.group('van.*', 'van.*')
     options.addBooleanOption('Xdoclint:none', true)
     options.bottom = "<a href='https://teamvan.org'>Team V.A.N.</a>"
     doFirst {
