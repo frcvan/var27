@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-package van.robot.subsystem.drive;
+package van.robot.subsystems.drive;
 
-import static van.robot.subsystem.drive.DriveConstants.*;
+import static van.robot.subsystems.drive.DriveConstants.*;
 
 import org.wpilib.math.controller.PIDController;
 import org.wpilib.simulation.DifferentialDrivetrainSim;

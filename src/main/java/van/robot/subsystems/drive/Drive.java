@@ -5,10 +5,10 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-package van.robot.subsystem.drive;
+package van.robot.subsystems.drive;
 
 import static org.wpilib.units.Units.*;
-import static van.robot.subsystem.drive.DriveConstants.*;
+import static van.robot.subsystems.drive.DriveConstants.*;
 
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -104,6 +104,8 @@ public class Drive extends SubsystemBase {
 
     // Update odometry
     poseEstimator.update(rawGyroRotation, getLeftPositionMeters(), getRightPositionMeters());
+
+    Logger.recordOutput("Odometry/Robot", getPose());
   }
 
   /** Runs the drive at the desired velocity. */

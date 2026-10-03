@@ -46,7 +46,7 @@ deploy {
                 wpilibStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
                     files = project.fileTree('src/main/deploy')
                     directory = '/home/systemcore/deploy'
-                    deleteOldFiles = false // Change to true to delete files on systemcore that no
+                    deleteOldFiles = true // Change to true to delete files on systemcore that no
                     // longer exist in deploy directory of this project
                 }
             }

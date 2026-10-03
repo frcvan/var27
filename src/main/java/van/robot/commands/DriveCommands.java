@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-package van.robot.command;
+package van.robot.commands;
 
-import static van.robot.subsystem.drive.DriveConstants.maxSpeedMetersPerSec;
+import static van.robot.subsystems.drive.DriveConstants.maxSpeedMetersPerSec;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -19,7 +19,7 @@ import org.wpilib.command2.Commands;
 import org.wpilib.drive.DifferentialDrive;
 import org.wpilib.math.util.MathUtil;
 import org.wpilib.system.Timer;
-import van.robot.subsystem.drive.Drive;
+import van.robot.subsystems.drive.Drive;
 
 public class DriveCommands {
   private static final double DEADBAND = 0.1;
