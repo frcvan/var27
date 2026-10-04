@@ -187,6 +187,6 @@ compile_commands.json
 .factorypath
 
 # Version file
-src/main/java/van/robot/BuildConstants.java
+BuildConstants.java
 
 simgui*.json

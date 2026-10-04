@@ -18,6 +18,14 @@ repositories {
 
 def ROBOT_MAIN_CLASS = "van.robot.Main"
 
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src/java"]
+        }
+    }
+}
+
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
@@ -44,7 +52,7 @@ deploy {
 
                 // Static files artifact
                 wpilibStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
-                    files = project.fileTree('src/main/deploy')
+                    files = project.fileTree('deploy')
                     directory = '/home/systemcore/deploy'
                     deleteOldFiles = true // Change to true to delete files on systemcore that no
                     // longer exist in deploy directory of this project
@@ -92,8 +100,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
-    annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
+    //def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
+    //annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 }
 
 test {
@@ -137,7 +145,7 @@ def vendorDependencyCoordinates = fileTree('vendordeps')
 
 def resolveJavadocDependencySources = {
     def wpilibDependencyCoordinates = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts
-            .findAll { it.moduleVersion.id.group.startsWith('org.wpilib.') }
+            .findAll { it.moduleVersion.id.group.startsWith('org.wpilib') }
             .collect { artifact ->
                 def module = artifact.moduleVersion.id
                 "${module.group}:${module.name}:${module.version}"
@@ -176,7 +184,7 @@ tasks.named('javadoc', Javadoc) {
 // Create version file
 project.compileJava.dependsOn(createVersionFile)
 gversion {
-    srcDir       = "src/main/java/"
+    srcDir       = "src/java/"
     classPackage = "van.robot"
     className    = "BuildConstants"
     dateFormat   = "yyyy-MM-dd HH:mm:ss z"
