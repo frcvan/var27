@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file
 // at the root directory of this project.
 
-package van.robot;
+package org.teamvan.robot;
 
 import org.wpilib.framework.RobotBase;
 

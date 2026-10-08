@@ -16,15 +16,7 @@ repositories {
     gradlePluginPortal()
 }
 
-def ROBOT_MAIN_CLASS = "van.robot.Main"
-
-sourceSets {
-    main {
-        java {
-            srcDirs = ["src/java"]
-        }
-    }
-}
+def ROBOT_MAIN_CLASS = "org.teamvan.robot.Main"
 
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
@@ -52,7 +44,7 @@ deploy {
 
                 // Static files artifact
                 wpilibStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
-                    files = project.fileTree('deploy')
+                    files = project.fileTree('src/main/deploy')
                     directory = '/home/systemcore/deploy'
                     deleteOldFiles = true // Change to true to delete files on systemcore that no
                     // longer exist in deploy directory of this project
@@ -184,8 +176,8 @@ tasks.named('javadoc', Javadoc) {
 // Create version file
 project.compileJava.dependsOn(createVersionFile)
 gversion {
-    srcDir       = "src/java/"
-    classPackage = "van.robot"
+    srcDir       = "src/main/java/"
+    classPackage = "org.teamvan.robot"
     className    = "BuildConstants"
     dateFormat   = "yyyy-MM-dd HH:mm:ss z"
     timeZone     = "America/New_York"

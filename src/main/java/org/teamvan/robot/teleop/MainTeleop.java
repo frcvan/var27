@@ -1,10 +1,10 @@
-package van.robot.util;
+package org.teamvan.robot.teleop;
 
 import org.wpilib.opmode.OpMode;
-import org.wpilib.opmode.Utility;
+import org.wpilib.opmode.Teleop;
 
-@Utility
-public class HelloWorldUtil implements OpMode {
+@Teleop
+public class MainTeleop implements OpMode {
   @Override
   public void periodic() {
     System.out.println("Hello, World");
