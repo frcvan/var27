@@ -18,6 +18,10 @@ repositories {
 
 def ROBOT_MAIN_CLASS = "org.teamvan.robot.Main"
 
+def debugMode = project.hasProperty("debugMode");
+def deployRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contains("deploy") })
+def simRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contains("run") })
+
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
@@ -46,16 +50,28 @@ deploy {
                     // -- do not do this unless you want profiling mode, it can slow the robot down.
                     project.logger.lifecycle('Checking if debug mode...')
                     //Enter debug mode with ./gradlew deploy -PdebugMode
-                    if (project.hasProperty("debugMode")) {
+                    if (debugMode) {
+                        jvmArgs.add("-DdebugMode=true")
+
                         project.logger.lifecycle('Debug mode enabled!')
-                        project.logger.lifecycle("Connect JMX client to roborio-" + team + "-frc.local:1099 or " + "10." + (team / 100) + ".2" + ":1099 for RoboRIO profiling with visualvm.")
+
+                        def hostname = "roborio-" + team + "-frc.local"
+                        def ipAddress = "10." + (team / 100) + ".2"
+
+                        if(simRequested) {
+                            hostname = "localhost"
+                            ipAddress = "127.0.0.1"
+                        }
+
+                        project.logger.lifecycle("Connect JMX client to " + hostname + ":1099 or " + ipAddress + ":1099 for RoboRIO profiling with visualvm.")
                         jvmArgs.add("-Dcom.sun.management.jmxremote=true")
                         jvmArgs.add("-Dcom.sun.management.jmxremote.port=1099")
                         jvmArgs.add("-Dcom.sun.management.jmxremote.local.only=false")
                         jvmArgs.add("-Dcom.sun.management.jmxremote.ssl=false")
                         jvmArgs.add("-Dcom.sun.management.jmxremote.authenticate=false")
-                        jvmArgs.add("-Djava.rmi.server.hostname=" + "10." + (team / 100) + ".2")
+                        jvmArgs.add("-Djava.rmi.server.hostname=" + ipAddress)
 
+                        project.logger.lifecycle("Connect debugger to " + hostname + ":5005 or " + ipAddress + ":5005 for RoboRIO debugging with IntelliJ/VSCode.")
                         jvmArgs.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005")
                     }
                 }
@@ -70,6 +86,11 @@ deploy {
             }
         }
     }
+}
+
+run {
+    // FIXME: remove this if we do stuff via NT
+    systemProperty 'debugMode', debugMode
 }
 
 def deployArtifact = deploy.targets.systemcore.artifacts.wpilibJava
@@ -92,7 +113,12 @@ dependencies {
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
-
+    def asyncProfiler = "tools.profiler:async-profiler:4.5"
+    if (debugMode) {
+        implementation "tools.profiler:async-profiler:4.5"
+    } else {
+        compileOnly "tools.profiler:async-profiler:4.5"
+    }
     systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
     systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
 
@@ -203,7 +229,6 @@ gversion {
 }
 
 // Create commit with working changes on event branches
-def deployRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contains("deploy") })
 task(eventDeploy) {
     doLast {
         if (deployRequested) {

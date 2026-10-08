@@ -190,3 +190,5 @@ compile_commands.json
 BuildConstants.java
 
 simgui*.json
+
+profiler/
