@@ -40,6 +40,24 @@ deploy {
                 wpilibJava(getArtifactTypeClass('WPILibJavaArtifact')) {
                     // Set to true to use debug including JNI, which will drastically impact performance.
                     debugJni = false
+
+                    // TO ENTER DEBUG MODE:
+                    // Run: ./gradlew deploy -PdebugMode
+                    // -- do not do this unless you want profiling mode, it can slow the robot down.
+                    project.logger.lifecycle('Checking if debug mode...')
+                    //Enter debug mode with ./gradlew deploy -PdebugMode
+                    if (project.hasProperty("debugMode")) {
+                        project.logger.lifecycle('Debug mode enabled!')
+                        project.logger.lifecycle("Connect JMX client to roborio-" + team + "-frc.local:1099 or " + "10." + (team / 100) + ".2" + ":1099 for RoboRIO profiling with visualvm.")
+                        jvmArgs.add("-Dcom.sun.management.jmxremote=true")
+                        jvmArgs.add("-Dcom.sun.management.jmxremote.port=1099")
+                        jvmArgs.add("-Dcom.sun.management.jmxremote.local.only=false")
+                        jvmArgs.add("-Dcom.sun.management.jmxremote.ssl=false")
+                        jvmArgs.add("-Dcom.sun.management.jmxremote.authenticate=false")
+                        jvmArgs.add("-Djava.rmi.server.hostname=" + "10." + (team / 100) + ".2")
+
+                        jvmArgs.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005")
+                    }
                 }
 
                 // Static files artifact
