@@ -38,7 +38,7 @@ public class Profiler {
     try {
       getProf()
           .execute(
-              "start,jfr,event=wall,jfrsync=profile,trace=org/teamvan/robot/**,loop=1m,file="
+              "start,jfr,event=wall,jfrsync=profile,trace=org.teamvan.robot.**,trace=org.wpilib.command3.Scheduler.run,loop=1m,file="
                   + genFolder()
                   + "/profile-%t.jfr");
     } catch (Exception e) {

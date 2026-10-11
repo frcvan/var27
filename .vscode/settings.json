@@ -65,8 +65,9 @@
   "files.trimTrailingWhitespace": false,
   "spotlessGradle.diagnostics.enable": true,
   "spotlessGradle.format.enable": true,
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.spotlessGradle": "explicit"
+    "source.fixAll.spotlessGradle": "always"
   },
   "[java]": {
     "editor.defaultFormatter": "richardwillis.vscode-spotless-gradle"

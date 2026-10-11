@@ -22,6 +22,10 @@ def debugMode = project.hasProperty("debugMode");
 def deployRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contains("deploy") })
 def simRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contains("run") })
 
+configurations {
+    asyncProfilerConverter
+}
+
 // Define my targets (SystemCore) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
@@ -48,8 +52,7 @@ deploy {
                     // TO ENTER DEBUG MODE:
                     // Run: ./gradlew deploy -PdebugMode
                     // -- do not do this unless you want profiling mode, it can slow the robot down.
-                    project.logger.lifecycle('Checking if debug mode...')
-                    //Enter debug mode with ./gradlew deploy -PdebugMode
+                    // Enter debug mode with ./gradlew deploy -PdebugMode
                     if (debugMode) {
                         jvmArgs.add("-DdebugMode=true")
 
@@ -113,12 +116,7 @@ dependencies {
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
-    def asyncProfiler = "tools.profiler:async-profiler:4.5"
-    if (debugMode) {
-        implementation "tools.profiler:async-profiler:4.5"
-    } else {
-        compileOnly "tools.profiler:async-profiler:4.5"
-    }
+
     systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
     systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
 
@@ -135,6 +133,15 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    def asyncProfVersion = "4.5"
+    def asyncProf = "tools.profiler:async-profiler:$asyncProfVersion"
+    if (debugMode) {
+        implementation asyncProf
+    } else {
+        compileOnly asyncProf
+    }
+    asyncProfilerConverter "tools.profiler:jfr-converter:$asyncProfVersion"
 
     //def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     //annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
@@ -260,6 +267,61 @@ task(eventDeploy) {
     }
 }
 createVersionFile.dependsOn(eventDeploy)
+
+task generateFlamegraphs {
+    group = "Profiling"
+    description = "Scans profiler/*/ directories and converts .jfr files into flamegraph.html."
+
+    doLast {
+        def profilerRoot = file("profiler")
+        if (!profilerRoot.exists() || !profilerRoot.isDirectory()) {
+            println "No 'profiler' directory found at ${profilerRoot.absolutePath}. Skipping flamegraph generation."
+            return
+        }
+
+        // Get the resolved JAR file(s) from the configuration (uses local cache, no new downloads)
+        def cpFiles = configurations.asyncProfilerConverter.files
+        if (cpFiles.empty) {
+            throw new GradleException("Async-profiler dependency files could not be resolved.")
+        }
+
+        println "Resolved async-profiler converter JAR files: ${cpFiles}"
+
+        // Create an isolated ClassLoader to run the async-profiler converter entry point
+        URL[] urls = cpFiles.collect { it.toURI().toURL() } as URL[]
+        URLClassLoader classLoader = new URLClassLoader(urls, this.getClass().getClassLoader())
+        // Iterate through all subdirectories under profiler/ (i.e. profiler/*/)
+        profilerRoot.eachDir { subDir ->
+            def jfrFiles = []
+            subDir.eachFileMatch(groovy.io.FileType.FILES, ~/.*\.jfr$/) { jfrFile ->
+                jfrFiles << jfrFile.absolutePath
+            }
+
+            if (!jfrFiles.isEmpty()) {
+                def htmlFile = new File(subDir, "flamegraph.html")
+                println "Converting ${jfrFiles.size()} JFR file(s) in '${subDir.name}' -> ${htmlFile.name}"
+
+                try {
+                    // Modern async-profiler (4.x+) uses one.convert.Main
+                    Class<?> converterMain = classLoader.loadClass("one.convert.Main")
+                    def mainMethod = converterMain.getMethod("main", String[].class)
+
+                    // Build argument array: all JFR files followed by the output HTML file path
+                    List<String> argList = []
+                    argList.addAll(jfrFiles)
+                    argList.add(htmlFile.absolutePath)
+                    String[] args = argList.toArray(new String[0])
+
+                    mainMethod.invoke(null, [args] as Object[])
+                } catch (Exception ex) {
+                    ex.printStackTrace()
+                    throw new GradleException("Failed to invoke async-profiler converter for directory '${subDir.name}'", ex)
+                }
+            }
+        }
+        println "Flamegraph generation completed successfully!"
+    }
+}
 
 // Spotless formatting
 project.compileJava.dependsOn(spotlessApply)

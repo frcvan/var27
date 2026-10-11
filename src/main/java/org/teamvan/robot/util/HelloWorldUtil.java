@@ -10,5 +10,15 @@ public class HelloWorldUtil implements OpMode {
   public void start() {}
 
   @Override
-  public void periodic() {}
+  public void periodic() {
+    double res = 1.0;
+    for (int i = 0; i < 100_000_000; i++) {
+      res = res * (1.0 + Math.sin(i));
+    }
+    try {
+      Thread.sleep(500);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
 }
