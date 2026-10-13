@@ -12,6 +12,7 @@ public class Profiler {
     return AsyncProfiler.getInstance();
   }
 
+  @SuppressWarnings("unused")
   private static String genFolder() {
     if (folder != null) return folder;
     String base =
