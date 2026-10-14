@@ -63,7 +63,6 @@
   "java.dependency.enableDependencyCheckup": false,
   "java.format.enabled": false,
   "files.trimTrailingWhitespace": false,
-  "spotlessGradle.diagnostics.enable": true,
   "spotlessGradle.format.enable": true,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {

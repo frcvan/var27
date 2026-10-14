@@ -92,7 +92,6 @@ deploy {
 }
 
 run {
-    // FIXME: remove this if we do stuff via NT
     systemProperty 'debugMode', debugMode
 }
 
@@ -188,7 +187,7 @@ def vendorDependencyCoordinates = fileTree('vendordeps')
 
 def resolveJavadocDependencySources = {
     def wpilibDependencyCoordinates = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts
-            .findAll { it.moduleVersion.id.group.startsWith('org.wpilib') }
+            .findAll { it.moduleVersion.id.group.startsWith('org.wpilib') || it.moduleVersion.id.group.startsWith('tools.profiler') }
             .collect { artifact ->
                 def module = artifact.moduleVersion.id
                 "${module.group}:${module.name}:${module.version}"
@@ -209,7 +208,7 @@ def resolveJavadocDependencySources = {
 tasks.named('javadoc', Javadoc) {
     classpath = files(sourceSets.main.runtimeClasspath, configurations.annotationProcessor)
     destinationDir = layout.buildDirectory.dir('docs/javadoc').get().asFile
-    options.group('van.*', 'van.*')
+    options.group('org.teamvan.*', 'org.teamvan.*')
     options.addBooleanOption('Xdoclint:none', true)
     options.bottom = "<a href='https://teamvan.org'>Team V.A.N.</a>"
     doFirst {

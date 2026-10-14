@@ -1,12 +1,14 @@
 package org.teamvan.robot;
 
 import org.teamvan.robot.generated.TunerConstants;
+import org.teamvan.robot.manager.Manager;
 import org.teamvan.robot.mechanisms.drive.Drive;
 import org.teamvan.robot.mechanisms.drive.GyroIO;
 import org.teamvan.robot.mechanisms.drive.GyroIOPigeon2;
 import org.teamvan.robot.mechanisms.drive.ModuleIO;
 import org.teamvan.robot.mechanisms.drive.ModuleIOSim;
 import org.teamvan.robot.mechanisms.drive.ModuleIOTalonFX;
+import org.teamvan.robot.mechanisms.flag.Flag;
 import org.teamvan.robot.util.Profiler;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.button.CommandGamepad;
@@ -16,14 +18,14 @@ public class Robot extends OpModeRobot {
   /** The driver's gamepad, shared with opmodes that want to bind extra buttons. */
   public final CommandGamepad driverController = new CommandGamepad(0);
 
-  /** The drivetrain mechanism. Opmodes and utility opmodes can claim it via their commands. */
-  public final Drive drive;
+  final Manager manager;
 
   public Robot() {
     if (Boolean.getBoolean("debugMode")) {
       Profiler.start();
     }
 
+    final Drive drive;
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
@@ -63,14 +65,18 @@ public class Robot extends OpModeRobot {
     // command requires the drivetrain, and any command scheduled by an opmode or button binding
     // takes over for as long as it runs.
     drive.setDefaultCommand(drive.joystickDrive(driverController.getGamepad()));
+
+    final Flag flag = new Flag();
+
+    manager = new Manager(drive, flag);
   }
 
   @Override
   public void robotPeriodic() {
     // Read hardware and integrate odometry before running commands
-    drive.updateInputs();
+    manager.updateInputs();
     Scheduler.getDefault().run();
     // Publish telemetry after commands have written their outputs
-    drive.updateOutputs();
+    manager.updateOutputs();
   }
 }

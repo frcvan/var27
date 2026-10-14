@@ -1,4 +1,4 @@
-package org.teamvan.robot.util;
+package org.teamvan.robot.opmode.util;
 
 import org.wpilib.opmode.OpMode;
 import org.wpilib.opmode.Utility;

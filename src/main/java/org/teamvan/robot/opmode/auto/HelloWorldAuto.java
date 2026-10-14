@@ -1,4 +1,4 @@
-package org.teamvan.robot.auto;
+package org.teamvan.robot.opmode.auto;
 
 import org.wpilib.opmode.Autonomous;
 import org.wpilib.opmode.OpMode;

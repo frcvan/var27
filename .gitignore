@@ -192,3 +192,5 @@ BuildConstants.java
 simgui*.json
 
 profiler/
+
+*.env*
