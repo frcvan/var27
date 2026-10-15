@@ -1,5 +1,3 @@
-Starting Groovy-Eclipse compiler resolver. Specified compiler level: unspecified
- 20 org.codehaus.groovy_5.0.0.v202503311943-e2503 RESOLVED
 plugins {
     id "java"
     id "application"
@@ -12,16 +10,12 @@ plugins {
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-        vendor = JvmVendorSpec.GRAAL_VM
-    }
 }
 
 graalvmNative {
     binaries {
         named("main") {
-            buildArgs.addAll("--no-fallback", "--enable-http", "--enable-https")
+            buildArgs.addAll("--tool:svm-wasm", "-g")
         }
     }
 }
@@ -39,6 +33,7 @@ def simRequested = gradle.startParameter.taskNames.any({ it.toLowerCase().contai
 
 configurations {
     asyncProfilerConverter
+    upstreamHal
 }
 
 // Define my targets (SystemCore) and artifacts (deployable files)
@@ -124,25 +119,123 @@ task(replayWatch, type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
 }
 
+def halSimOutDir = layout.buildDirectory.dir('hal-sim').get().asFile
+def halSimJarFile = new File(halSimOutDir, 'hal-java-sim.jar')
+def wpiSimJarFile = new File(halSimOutDir, 'wpiutil-java-sim.jar')
+halSimOutDir.mkdirs()
+def moduleCache = new File(gradle.gradleUserHomeDir, 'caches/modules-2/files-2.1')
+def findCachedJar = { group, name, version ->
+    def dir = new File(moduleCache, "${group}/${name}/${version}")
+    def matches = dir.exists() ? fileTree(dir).matching {
+        include "**/${name}-${version}.jar"
+    }.files : [] as Set
+    if (matches.isEmpty()) {
+        throw new GradleException("Missing ${group}:${name}:${version} in ${dir}")
+    }
+    matches.iterator().next()
+}
+def upstreamHalJar = findCachedJar('org.wpilib.hal', 'hal-java', '2027.0.0-alpha-7')
+def upstreamWpiJar = findCachedJar('org.wpilib.wpiutil', 'wpiutil-java', '2027.0.0-alpha-7')
+def upstreamNtJar = findCachedJar('org.wpilib.ntcore', 'ntcore-java', '2027.0.0-alpha-7')
+def ntSimJarFile = new File(halSimOutDir, 'ntcore-java-sim.jar')
+def halSimDigest = java.security.MessageDigest.getInstance('SHA-256')
+[
+    upstreamHalJar,
+    upstreamWpiJar,
+    upstreamNtJar
+].each { halSimDigest.update(it.bytes) }
+fileTree('src/halSim/java').matching { include '**/*.java' }.sort { it.path }.each { halSimDigest.update(it.bytes) }
+fileTree('src/main/java/org/teamvan/hal').matching { include '**/*.java' }.sort { it.path }.each { halSimDigest.update(it.bytes) }
+def halSimStamp = halSimDigest.digest().encodeHex().toString()
+def halSimStampFile = new File(halSimOutDir, 'inputs.sha256')
+if (!(halSimStampFile.exists() && halSimStampFile.text == halSimStamp && halSimJarFile.exists() && wpiSimJarFile.exists() && ntSimJarFile.exists())) {
+    def halSimWork = new File(halSimOutDir, 'work')
+    halSimWork.deleteDir()
+    halSimWork.mkdirs()
+    def strippedHal = new File(halSimWork, 'hal-stripped.jar')
+    def strippedWpi = new File(halSimWork, 'wpi-stripped.jar')
+    org.teamvan.hal.build.StripNative.rewrite(upstreamHalJar.toPath(), strippedHal.toPath())
+    org.teamvan.hal.build.StripNative.rewrite(upstreamWpiJar.toPath(), strippedWpi.toPath())
+    def strippedNt = new File(halSimWork, 'nt-stripped.jar')
+    org.teamvan.hal.build.StripNative.rewrite(upstreamNtJar.toPath(), strippedNt.toPath())
+    def retargetedHal = new File(halSimWork, 'hal-retargeted.jar')
+    def retargetedWpi = new File(halSimWork, 'wpi-retargeted.jar')
+    def retargetedNt = new File(halSimWork, 'nt-retargeted.jar')
+    logger.lifecycle("HAL sim retargeted ${org.teamvan.hal.build.Retarget.rewrite(strippedHal.toPath(), retargetedHal.toPath())} methods")
+    logger.lifecycle("WPIUtil sim retargeted ${org.teamvan.hal.build.Retarget.rewrite(strippedWpi.toPath(), retargetedWpi.toPath())} methods")
+    logger.lifecycle("NT sim retargeted ${org.teamvan.hal.build.Retarget.rewrite(strippedNt.toPath(), retargetedNt.toPath())} methods")
+    def halSimClasses = new File(halSimWork, 'classes')
+    halSimClasses.mkdirs()
+    def javac = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }.get().executablePath.toString()
+    def simSources = (fileTree('src/halSim/java') + fileTree('src/main/java/org/teamvan/hal')).files
+    def command = []
+    def webimage = new File(halSimWork, 'webimage')
+    copy {
+        from(zipTree(new File(System.getProperty('java.home'), 'jmods/org.graalvm.webimage.api.jmod')))
+        into webimage
+    }
+    command << javac << '--release' << '25' << '-d' << halSimClasses.absolutePath << '-cp' << ([
+        retargetedHal,
+        retargetedWpi,
+        retargetedNt,
+        new File(webimage, 'classes')
+    ].collect { it.absolutePath }.join(File.pathSeparator))
+    simSources.each { command << it.absolutePath }
+    def process = new ProcessBuilder(command.collect { it.toString() }).inheritIO().start()
+    if (process.waitFor() != 0) {
+        throw new GradleException('HAL sim javac failed')
+    }
+    ant.jar(destfile: halSimJarFile) {
+        zipfileset(src: retargetedHal)
+        fileset(dir: halSimClasses) { include(name: 'org/teamvan/hal/**') }
+    }
+    ant.jar(destfile: wpiSimJarFile) {
+        zipfileset(src: retargetedWpi) {
+            exclude(name: 'org/wpilib/util/runtime/RuntimeLoader.class')
+        }
+        fileset(dir: halSimClasses) {
+            include(name: 'org/teamvan/hal/**')
+            include(name: 'org/wpilib/util/runtime/RuntimeLoader.class')
+        }
+    }
+    ant.jar(destfile: ntSimJarFile) {
+        zipfileset(src: retargetedNt)
+        fileset(dir: halSimClasses) { include(name: 'org/teamvan/hal/**') }
+    }
+    halSimStampFile.text = halSimStamp
+}
+
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 5.
 dependencies {
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
+    upstreamHal 'org.wpilib.hal:hal-java:2027.0.0-alpha-7'
+    upstreamHal 'org.wpilib.wpiutil:wpiutil-java:2027.0.0-alpha-7'
+    implementation files(halSimJarFile, wpiSimJarFile, ntSimJarFile)
     implementation wpi.java.vendor.java()
 
-    systemcoreDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.systemcore)
+    configurations.matching {
+        it.name in [
+            'compileClasspath',
+            'runtimeClasspath',
+            'testCompileClasspath',
+            'testRuntimeClasspath'
+        ]
+    }.configureEach {
+        exclude group: 'org.wpilib.hal', module: 'hal-java'
+        exclude group: 'org.wpilib.wpiutil', module: 'wpiutil-java'
+        exclude group: 'org.wpilib.ntcore', module: 'ntcore-java'
+        exclude group: 'org.wpilib.hal', module: 'hal-jni'
+        exclude group: 'org.wpilib.wpiutil', module: 'wpiutil-jni'
+        exclude group: 'org.wpilib.ntcore', module: 'ntcore-jni'
+    }
+
     systemcoreDebug wpi.java.vendor.jniDebug(wpi.platforms.systemcore)
-
-    systemcoreRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.systemcore)
     systemcoreRelease wpi.java.vendor.jniRelease(wpi.platforms.systemcore)
-
-    nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
     nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
-    simulationDebug wpi.sim.enableDebug()
-
-    nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
     nativeRelease wpi.java.vendor.jniRelease(wpi.platforms.desktop)
+    simulationDebug wpi.sim.enableDebug()
     simulationRelease wpi.sim.enableRelease()
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
@@ -160,6 +253,7 @@ dependencies {
     //def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     //annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 }
+
 
 test {
     useJUnitPlatform()

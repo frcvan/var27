@@ -1,0 +1,17 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.8'
+    implementation 'org.ow2.asm:asm-tree:9.8'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
