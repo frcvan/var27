@@ -4,13 +4,42 @@ plugins {
     id "org.wpilib.GradleRIO" version "2027.0.0-alpha-7"
     id "com.peterabeles.gversion" version "1.10"
     id "com.diffplug.spotless" version "8.6.0"
+    id 'org.graalvm.buildtools.native' version '1.1.14'
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
+sourceSets {
+    wasm {
+        java {
+            srcDir 'src/wasm/java'
+        }
+        resources {
+            srcDir 'src/wasm/resources'
+        }
+        compileClasspath += sourceSets.main.output
+        compileClasspath += sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+}
 
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName.set("var27")
+            classpath.from(sourceSets.wasm.output)
+            mainClass.set("org.teamvan.robot.WasmMain")
+            buildArgs.addAll("--tool:svm-wasm", "-H:-AutoRunVM")
+        }
+    }
+}
+
+tasks.named('processWasmResources') {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
 repositories {
     mavenCentral()
     gradlePluginPortal()
@@ -145,6 +174,7 @@ dependencies {
     //def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     //annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 }
+
 
 test {
     useJUnitPlatform()

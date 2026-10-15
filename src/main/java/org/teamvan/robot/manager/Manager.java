@@ -31,4 +31,9 @@ public class Manager {
     drive.updateOutputs();
     flag.updateOutputs();
   }
+
+  /** Returns the drivetrain's current odometry pose. */
+  public org.wpilib.math.geometry.Pose2d pose() {
+    return drive.getPose();
+  }
 }

@@ -30,6 +30,21 @@ Build the project and run its tests:
 ./gradlew test
 ```
 
+## Wasm
+
+`org.teamvan.robot.WasmMain` is the Web Image entry. It does not call `RobotBase.startRobot` and does not construct `Robot`, because both load HAL. The browser calls `wasmTick()` once every 20 ms. That tick reads inputs, runs `Scheduler`, publishes outputs, and writes `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation`.
+
+The host installs these functions on `globalThis` before calling `wasmStart()`:
+
+- `wasmNowNanos()` returns monotonic time in nanoseconds.
+- `wasmDs()` returns `{enabled, alliance, leftX, leftY, rightX}`. `alliance` is `"red"` or `"blue"`.
+- `wasmNtGet(path)` returns the current NetworkTables value, or `undefined`.
+- `wasmNtPut(path, value)` receives telemetry and the pose numbers.
+
+`web/sim/` is the keyboard driver station. WASD drives, Q and E rotate, and Shift selects the red alliance. Pushing `main` publishes that page and the Javadoc from `.github/workflows/pages.yml`.
+
+`./gradlew nativeCompile` builds `var27.js` and `var27.js.wasm`. Desktop `./gradlew simulateJava` is unchanged.
+
 ## Debug mode
 
 Debug mode is intended for a deployed RoboRIO application. It enables JMX profiling on port `1099`; it does not enable a JDWP source-level debugger.
