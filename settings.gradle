@@ -1,5 +1,6 @@
 import org.gradle.internal.os.OperatingSystem
 
+
 pluginManagement {
     repositories {
         String wpilibYear = '2027_alpha7'
@@ -33,6 +34,11 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
