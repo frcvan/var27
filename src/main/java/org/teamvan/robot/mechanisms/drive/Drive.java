@@ -92,7 +92,7 @@ public class Drive implements Mechanism {
     modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
 
     // Start odometry thread
-    PhoenixOdometryThread.getInstance().start();
+    // PhoenixOdometryThread.getInstance().start();
   }
 
   /**

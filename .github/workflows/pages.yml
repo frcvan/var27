@@ -1,0 +1,70 @@
+name: Publish Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish site
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "25"
+          distribution: "graalvm"
+      - name: Setup Binaryen
+        run: |
+          curl -fsSL -o binaryen.tar.gz \
+            https://github.com/WebAssembly/binaryen/releases/download/version_125/binaryen-version_125-x86_64-linux.tar.gz
+          tar -xzf binaryen.tar.gz
+          echo "$PWD/binaryen-version_125/bin" >> "$GITHUB_PATH"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Grant execute permission
+        run: chmod +x gradlew
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Build Javadoc
+        run: ./gradlew javadoc -x spotlessCheck -x spotlessApply
+      - name: Build WASM sim
+        run: ./gradlew nativeCompile -x spotlessCheck -x spotlessApply
+      - name: Assemble site
+        run: |
+          site="$RUNNER_TEMP/site"
+          mkdir -p "$site/javadoc" "$site/sim"
+          cp -R build/docs/javadoc/. "$site/javadoc/"
+          cp -R web/. "$site/"
+          wasm="$(find build/native -type f -name '*.js.wasm' | head -n 1)"
+          js="${wasm%.wasm}"
+          cp "$js" "$site/sim/wasm.js"
+          cp "$wasm" "$site/sim/wasm.js.wasm"
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
