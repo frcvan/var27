@@ -30,9 +30,11 @@ graalvmNative {
     binaries {
         named("main") {
             imageName.set("var27")
-            classpath.from(sourceSets.wasm.output)
+            // Put the wasm shadow sources ahead of the main runtime classpath so our shims
+            // (e.g. com.ctre.phoenix6.CANBus) win over the JNI-backed vendor classes.
+            classpath.setFrom(sourceSets.wasm.runtimeClasspath)
             mainClass.set("org.teamvan.robot.WasmMain")
-            buildArgs.addAll("--tool:svm-wasm", "-H:-AutoRunVM")
+            buildArgs.addAll("--tool:svm-wasm", "-H:+UnlockExperimentalVMOptions", "-H:-AutoRunVM")
         }
     }
 }
@@ -204,6 +206,7 @@ jar {
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
+    options.compilerArgs.add '-parameters'
 }
 
 def vendorDependencyCoordinates = fileTree('vendordeps')

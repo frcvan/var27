@@ -40,12 +40,32 @@ import org.wpilib.util.Alert;
  * telemetry), which the robot calls around {@code Scheduler.getDefault().run()}.
  */
 public class Drive implements Mechanism {
+  static {
+    System.out.println("DRIVE-CLINIT-START");
+  }
+
   /** Joystick deadband applied to the linear and angular drive inputs. */
   private static final double DEADBAND = 0.1;
 
+  static {
+    System.out.println("DRIVE-AFTER-DEADBAND");
+  }
+
   /** The frequency at which the Phoenix odometry thread samples module and gyro signals. */
-  public static final double ODOMETRY_FREQUENCY =
-      TunerConstants.kCANBus.isNetworkFD() ? 250.0 : 100.0;
+  public static final double ODOMETRY_FREQUENCY = computeOdom();
+
+  private static double computeOdom() {
+    System.out.println("ODOM-1");
+    var bus = TunerConstants.kCANBus;
+    System.out.println("ODOM-2");
+    boolean fd = bus.isNetworkFD();
+    System.out.println("ODOM-3");
+    return fd ? 250.0 : 100.0;
+  }
+
+  static {
+    System.out.println("DRIVE-AFTER-ODOM");
+  }
 
   public static final double DRIVE_BASE_RADIUS =
       Math.max(
@@ -55,6 +75,10 @@ public class Drive implements Mechanism {
           Math.max(
               Math.hypot(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
               Math.hypot(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)));
+
+  static {
+    System.out.println("DRIVE-AFTER-RADIUS");
+  }
 
   public static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
@@ -79,17 +103,24 @@ public class Drive implements Mechanism {
   private final SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.ZERO);
 
+  static {
+    System.out.println("DRIVE-CLINIT-END");
+  }
+
   public Drive(
       GyroIO gyroIO,
       ModuleIO flModuleIO,
       ModuleIO frModuleIO,
       ModuleIO blModuleIO,
       ModuleIO brModuleIO) {
+    System.out.println("DRIVE-CTOR-START");
     this.gyroIO = gyroIO;
     modules[0] = new Module(flModuleIO, 0, TunerConstants.FrontLeft);
+    System.out.println("DRIVE-CTOR-M0");
     modules[1] = new Module(frModuleIO, 1, TunerConstants.FrontRight);
     modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
     modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
+    System.out.println("DRIVE-CTOR-MDONE");
 
     // Start odometry thread
     // PhoenixOdometryThread.getInstance().start();

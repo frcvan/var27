@@ -55,10 +55,11 @@ function paintPose() {
 }
 
 try {
-  await import("./wasm.js");
+  const BUILT_FILE = "var27.js";
+  await import(`./${BUILT_FILE}`);
 
   const config = new GraalVM.Config();
-  config.wasm_path = "./wasm.js.wasm";
+  config.wasm_path = `./${BUILT_FILE}.wasm`;
   await GraalVM.run({}, config).catch(console.error);
 
   window.wasmStart();

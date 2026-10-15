@@ -1,5 +1,8 @@
 package org.teamvan.robot;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import org.graalvm.webimage.api.JS;
 import org.teamvan.robot.generated.TunerConstants;
 import org.teamvan.robot.manager.Manager;
@@ -54,24 +57,57 @@ public final class WasmMain {
     exportTick(WasmMain::tick);
   }
 
+  @JS.Coerce
+  @JS(
+      args = {"n"},
+      value = "console.log('MARK ' + n);")
+  public static native void marker(int n);
+
+  @JS.Coerce
+  @JS(
+      args = {"msg"},
+      value = "console.log(msg);")
+  private static native void log(String msg);
+
   /** Constructs the sim robot. */
   public static void start() {
     if (manager != null) {
       return;
     }
-    JsTelemetry.install();
-    WasmRuntime.refresh();
+    try {
+      build();
+    } catch (Throwable t) {
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      t.printStackTrace(new PrintStream(out, true, StandardCharsets.UTF_8));
+      log(out.toString(StandardCharsets.UTF_8));
+      throw new RuntimeException(t);
+    }
+  }
 
-    Drive drive =
-        new Drive(
-            new GyroIO() {},
-            new ModuleIOSim(TunerConstants.FrontLeft),
-            new ModuleIOSim(TunerConstants.FrontRight),
-            new ModuleIOSim(TunerConstants.BackLeft),
-            new ModuleIOSim(TunerConstants.BackRight));
-    drive.setDefaultCommand(drive.joystickDrive(DriverStation.getGamepad(0)));
+  private static void build() {
+    marker(1);
+    JsTelemetry.install();
+    marker(2);
+    WasmRuntime.refresh();
+    marker(3);
+    ModuleIOSim fl = new ModuleIOSim(TunerConstants.FrontLeft);
+    ModuleIOSim fr = new ModuleIOSim(TunerConstants.FrontRight);
+    ModuleIOSim bl = new ModuleIOSim(TunerConstants.BackLeft);
+    ModuleIOSim br = new ModuleIOSim(TunerConstants.BackRight);
+    marker(4);
+    Drive drive = new Drive(new GyroIO() {}, fl, fr, bl, br);
+    marker(5);
+    marker(50);
+    org.wpilib.driverstation.Gamepad gamepad = DriverStation.getGamepad(0);
+    marker(51);
+    org.wpilib.command3.Command command = drive.joystickDrive(gamepad);
+    marker(52);
+    drive.setDefaultCommand(command);
+    marker(6);
     manager = new Manager(drive, new Flag());
+    marker(7);
     scheduler = Scheduler.getDefault();
+    marker(8);
   }
 
   /**
