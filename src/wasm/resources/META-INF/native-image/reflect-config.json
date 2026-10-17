@@ -98,5 +98,55 @@
   {
     "name": "org.wpilib.units.VoltageUnit",
     "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.math.geometry.Rotation2d",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.geometry.Pose2d",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.kinematics.SwerveModuleVelocity",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.kinematics.ChassisVelocities",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.teamvan.robot.WasmMain",
+    "methods": [
+      {
+        "name": "tick",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.command3.Continuation",
+    "methods": [
+      {
+        "name": "wasmContinuationBody",
+        "parameterTypes": []
+      }
+    ]
   }
 ]

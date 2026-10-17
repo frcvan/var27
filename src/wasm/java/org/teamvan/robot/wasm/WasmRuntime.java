@@ -2,6 +2,7 @@ package org.teamvan.robot.wasm;
 
 import java.util.Optional;
 import java.util.function.LongSupplier;
+import org.graalvm.webimage.api.JS;
 import org.graalvm.webimage.api.JSObject;
 import org.wpilib.driverstation.Alliance;
 
@@ -24,13 +25,9 @@ public final class WasmRuntime {
   /** Pulls the current DriverStation snapshot from JavaScript. */
   public static void refresh() {
     JSObject ds = JsBridge.driverStation();
-    setEnabled(Boolean.TRUE.equals(ds.get("enabled")));
-    Object allianceName = ds.get("alliance");
-    setAlliance(
-        allianceName != null && "red".equalsIgnoreCase(allianceName.toString())
-            ? Alliance.RED
-            : Alliance.BLUE);
-    setAxes(number(ds, "leftX"), number(ds, "leftY"), number(ds, "rightX"));
+    setEnabled(enabled(ds));
+    setAlliance(redAlliance(ds) ? Alliance.RED : Alliance.BLUE);
+    setAxes(leftX(ds), leftY(ds), rightX(ds));
   }
 
   /**
@@ -123,11 +120,23 @@ public final class WasmRuntime {
     return BATTERY_VOLTS;
   }
 
-  private static double number(JSObject object, String key) {
-    Object value = object.get(key);
-    if (value instanceof Number number) {
-      return number.doubleValue();
-    }
-    return 0.0;
-  }
+  @JS.Coerce
+  @JS("return ds.enabled === true;")
+  private static native boolean enabled(JSObject ds);
+
+  @JS.Coerce
+  @JS("return typeof ds.alliance === 'string' && ds.alliance.toLowerCase() === 'red';")
+  private static native boolean redAlliance(JSObject ds);
+
+  @JS.Coerce
+  @JS("return typeof ds.leftX === 'number' ? ds.leftX : 0;")
+  private static native double leftX(JSObject ds);
+
+  @JS.Coerce
+  @JS("return typeof ds.leftY === 'number' ? ds.leftY : 0;")
+  private static native double leftY(JSObject ds);
+
+  @JS.Coerce
+  @JS("return typeof ds.rightX === 'number' ? ds.rightX : 0;")
+  private static native double rightX(JSObject ds);
 }

@@ -1,12 +1,12 @@
 package org.wpilib.math.jni;
 
 /**
- * Wasm stand-in for Eigen's matrix exponential. The motor simulation only exponentiates the 2×2
- * plant matrix, so this uses scaling and squaring plus a truncated series instead of {@code
- * wpimathjni}.
+ * Wasm stand-in for Eigen's matrix exponential. Motor discretization exponentiates an augmented 3×3
+ * state/input matrix, so this uses scaling and squaring plus a convergent Taylor series instead of
+ * {@code wpimathjni}.
  */
 public final class EigenJNI {
-  private static final int SERIES_TERMS = 12;
+  private static final int SERIES_TERMS = 18;
 
   private EigenJNI() {}
 
@@ -18,26 +18,47 @@ public final class EigenJNI {
    * @param dst row-major destination
    */
   public static void exp(double[] src, int rows, double[] dst) {
+    int size = rows * rows;
     double[] scaled = src.clone();
     int squarings = 0;
-    double norm = infinityNorm(scaled, rows);
-    while (norm > 0.5 && squarings < 20) {
+    double norm = maxAbs(scaled, size);
+    // rows * maxAbs bounds the infinity norm, without overflowing the row sums.
+    double threshold = 0.5 / rows;
+    while (norm > threshold && Double.isFinite(norm)) {
       scale(scaled, 0.5);
       norm *= 0.5;
       squarings++;
     }
 
-    double[] term = identity(rows);
-    double[] sum = identity(rows);
+    double[] term = new double[size];
+    double[] product = new double[size];
+    double[] sum = dst;
+    for (int i = 0; i < size; i++) {
+      sum[i] = 0.0;
+    }
+    for (int i = 0; i < rows; i++) {
+      term[i * rows + i] = 1.0;
+      sum[i * rows + i] = 1.0;
+    }
     for (int k = 1; k <= SERIES_TERMS; k++) {
-      term = multiply(term, scaled, rows);
-      scale(term, 1.0 / k);
-      add(sum, term);
+      multiply(term, scaled, rows, product);
+      scale(product, 1.0 / k);
+      double[] previousTerm = term;
+      term = product;
+      product = previousTerm;
+      if (!add(sum, term, size)) {
+        break;
+      }
     }
     for (int i = 0; i < squarings; i++) {
-      sum = multiply(sum, sum, rows);
+      multiply(sum, sum, rows, product);
+      double[] previousSum = sum;
+      sum = product;
+      product = previousSum;
     }
-    System.arraycopy(sum, 0, dst, 0, rows * rows);
+    if (sum != dst) {
+      System.arraycopy(sum, 0, dst, 0, size);
+    }
   }
 
   /**
@@ -56,28 +77,15 @@ public final class EigenJNI {
     System.arraycopy(src, 0, dst, 0, rows * rows);
   }
 
-  private static double infinityNorm(double[] matrix, int rows) {
+  private static double maxAbs(double[] matrix, int size) {
     double norm = 0.0;
-    for (int row = 0; row < rows; row++) {
-      double sum = 0.0;
-      for (int col = 0; col < rows; col++) {
-        sum += Math.abs(matrix[row * rows + col]);
-      }
-      norm = Math.max(norm, sum);
+    for (int i = 0; i < size; i++) {
+      norm = Math.max(norm, Math.abs(matrix[i]));
     }
     return norm;
   }
 
-  private static double[] identity(int rows) {
-    double[] matrix = new double[rows * rows];
-    for (int i = 0; i < rows; i++) {
-      matrix[i * rows + i] = 1.0;
-    }
-    return matrix;
-  }
-
-  private static double[] multiply(double[] left, double[] right, int rows) {
-    double[] product = new double[rows * rows];
+  private static void multiply(double[] left, double[] right, int rows, double[] product) {
     for (int row = 0; row < rows; row++) {
       for (int col = 0; col < rows; col++) {
         double sum = 0.0;
@@ -87,7 +95,6 @@ public final class EigenJNI {
         product[row * rows + col] = sum;
       }
     }
-    return product;
   }
 
   private static void scale(double[] matrix, double factor) {
@@ -96,9 +103,13 @@ public final class EigenJNI {
     }
   }
 
-  private static void add(double[] sum, double[] term) {
-    for (int i = 0; i < sum.length; i++) {
-      sum[i] += term[i];
+  private static boolean add(double[] sum, double[] term, int size) {
+    boolean changed = false;
+    for (int i = 0; i < size; i++) {
+      double next = sum[i] + term[i];
+      changed |= next != sum[i];
+      sum[i] = next;
     }
+    return changed;
   }
 }

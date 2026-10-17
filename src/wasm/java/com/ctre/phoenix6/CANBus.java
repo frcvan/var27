@@ -40,6 +40,21 @@ public class CANBus implements Cloneable, Comparable<CANBus> {
   }
 
   @Override
+  public String toString() {
+    return name;
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return other instanceof CANBus canbus && name.equals(canbus.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode();
+  }
+
+  @Override
   public CANBus clone() {
     return new CANBus(name);
   }

@@ -25,11 +25,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 25
       - name: Setup GraalVM
         uses: graalvm/setup-graalvm@v1
         with:

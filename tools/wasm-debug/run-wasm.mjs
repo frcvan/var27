@@ -11,7 +11,9 @@
 // Any Java throwable is printed with its message chain and, when the image
 // exposes one, its Java backtrace.
 import path from "node:path";
+import assert from "node:assert/strict";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createWasmContinuations } from "../../web/sim/continuations.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const dir = path.resolve(process.argv[2] ?? path.join(repoRoot, "build/native/nativeCompile"));
@@ -22,13 +24,16 @@ globalThis.document = {
 
 let nowNanos = 0;
 const pose = {};
+const ds = { enabled: false, alliance: "blue", leftX: 0, leftY: -1, rightX: 0 };
 globalThis.wasmNowNanos = () => nowNanos;
-globalThis.wasmDs = () => ({ enabled: true, alliance: "blue", leftX: 0, leftY: 0, rightX: 0 });
+globalThis.wasmDs = () => ds;
 globalThis.wasmNtGet = () => undefined;
 globalThis.wasmNtPut = (p, v) => {
+  assert.equal(typeof p, "string", "telemetry paths must be JS strings");
   pose[p] = v;
 };
 
+globalThis.wasmContinuations = createWasmContinuations();
 await import(pathToFileURL(path.join(dir, "var27.js")).href);
 
 const config = new globalThis.GraalVM.Config();
@@ -52,12 +57,69 @@ function errorText(error) {
 }
 
 try {
+  const tick = async (count) => {
+    for (let i = 0; i < count; i++) {
+      nowNanos += 20_000_000;
+      await globalThis.wasmTick();
+      for (const path of ["/Sim/Pose/X", "/Sim/Pose/Y", "/Sim/Pose/Rotation"]) {
+        assert.equal(typeof pose[path], "number", path);
+        assert.ok(Number.isFinite(pose[path]), `${path} must be finite`);
+      }
+    }
+  };
   globalThis.wasmStart();
-  for (let i = 0; i < 5; i++) {
-    nowNanos += 0.02 * 1e9;
-    globalThis.wasmTick();
+  globalThis.wasmStart(); // Repeated startup must not rebuild or reset the robot.
+  await tick(25);
+  assert.equal(pose["/Sim/Pose/X"], 0, "disabled input must not drive");
+  ds.enabled = true;
+  await tick(100);
+  const forwardX = pose["/Sim/Pose/X"];
+  assert.ok(forwardX > 1, "forward input must drive in positive X");
+  assert.ok(Math.abs(pose["/Sim/Pose/Y"]) < 1e-6, "forward drive must not drift sideways");
+  ds.alliance = "red";
+  await tick(100);
+  assert.ok(pose["/Sim/Pose/X"] < forwardX - 1, "red alliance must reverse field direction");
+  ds.leftY = 0;
+  ds.leftX = 1;
+  const beforeY = pose["/Sim/Pose/Y"];
+  await tick(100);
+  assert.ok(pose["/Sim/Pose/Y"] > beforeY + 1, "red alliance lateral drive must move positive Y");
+  ds.leftX = 0;
+  ds.rightX = -0.5;
+  const beforeRotation = pose["/Sim/Pose/Rotation"];
+  await tick(25);
+  assert.ok(pose["/Sim/Pose/Rotation"] > beforeRotation + 0.1, "rotation input must rotate");
+  ds.enabled = false;
+  ds.leftY = -1;
+  await tick(100); // Allow physical spin-down after disabling with nonzero axes.
+  const stoppedX = pose["/Sim/Pose/X"];
+  const stoppedY = pose["/Sim/Pose/Y"];
+  await tick(50);
+  assert.ok(Math.hypot(pose["/Sim/Pose/X"] - stoppedX, pose["/Sim/Pose/Y"] - stoppedY) < 1e-5,
+    "disabled robot must settle despite held axes");
+  ds.enabled = true;
+  ds.rightX = 0;
+  ds.leftY = 0;
+  await tick(25);
+  for (const [path, value] of Object.entries(pose)) {
+    if (Array.isArray(value)) {
+      assert.ok(Object.keys(value).every((key) => /^\d+$/.test(key)), `${path}: malformed array`);
+    }
   }
-  console.log("STARTED_OK", JSON.stringify(pose));
+  const samples = [];
+  for (let i = 0; i < 1000; i++) {
+    const started = performance.now();
+    await tick(1);
+    samples.push(performance.now() - started);
+  }
+  samples.sort((a, b) => a - b);
+  console.log("WASM_SMOKE_OK", JSON.stringify({
+    forwardX,
+    pose: [pose["/Sim/Pose/X"], pose["/Sim/Pose/Y"], pose["/Sim/Pose/Rotation"]],
+    tickMedianMs: samples[500],
+    tickP95Ms: samples[950],
+    tickMaxMs: samples[999],
+  }));
 } catch (error) {
   console.log("START_FAILED: " + errorText(error));
   try {
@@ -67,4 +129,5 @@ try {
   } catch (e) {
     console.log("STACK_ERR", e);
   }
+  process.exitCode = 1;
 }

@@ -1,20 +1,18 @@
 package org.wpilib.system;
 
-import org.teamvan.robot.wasm.WasmRuntime;
-
 /** Wasm stand-in. Time comes from {@code wasmNowNanos}, not HAL. */
 public class Timer {
   /**
-   * @return JavaScript monotonic time in seconds
+   * @return configured robot time in seconds; JavaScript monotonic time by default
    */
   public static double getTimestamp() {
-    return WasmRuntime.nowNanos() / 1_000_000_000.0;
+    return RobotController.getTime() / 1_000_000_000.0;
   }
 
   /**
    * @return JavaScript monotonic time in seconds
    */
   public static double getMonotonicTimestamp() {
-    return getTimestamp();
+    return RobotController.getMonotonicTime() / 1_000_000_000.0;
   }
 }

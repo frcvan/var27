@@ -1,6 +1,15 @@
+import { createWasmContinuations } from "./continuations.js";
+
 const PERIOD_SECONDS = 0.02;
 const keys = new Set();
 const pose = { x: 0, y: 0, rotation: 0 };
+const driverStation = {
+  enabled: true,
+  alliance: "blue",
+  leftX: 0,
+  leftY: 0,
+  rightX: 0,
+};
 let nowNanos = 0;
 
 const status = document.querySelector("#status");
@@ -9,13 +18,13 @@ const y = document.querySelector("#y");
 const rotation = document.querySelector("#rotation");
 
 window.wasmNowNanos = () => nowNanos;
-window.wasmDs = () => ({
-  enabled: true,
-  alliance: keys.has("shift") ? "red" : "blue",
-  leftX: axis("a", "d"),
-  leftY: axis("w", "s"),
-  rightX: axis("q", "e"),
-});
+window.wasmDs = () => {
+  driverStation.alliance = keys.has("shift") ? "red" : "blue";
+  driverStation.leftX = axis("a", "d");
+  driverStation.leftY = axis("w", "s");
+  driverStation.rightX = axis("q", "e");
+  return driverStation;
+};
 window.wasmNtGet = () => undefined;
 window.wasmNtPut = (path, value) => {
   if (path === "/Sim/Pose/X") pose.x = value;
@@ -55,19 +64,31 @@ function paintPose() {
 }
 
 try {
-  const BUILT_FILE = "var27.js";
+  globalThis.wasmContinuations = createWasmContinuations();
+  const BUILT_FILE = "wasm.js";
   await import(`./${BUILT_FILE}`);
 
   const config = new GraalVM.Config();
   config.wasm_path = `./${BUILT_FILE}.wasm`;
-  await GraalVM.run({}, config).catch(console.error);
+  await GraalVM.run({}, config);
 
   window.wasmStart();
   status.textContent = "Running";
-  setInterval(() => {
-    nowNanos += PERIOD_SECONDS * 1e9;
-    window.wasmTick();
-    paintPose();
+  let ticking = false;
+  const timer = setInterval(async () => {
+    if (ticking) return;
+    ticking = true;
+    try {
+      nowNanos += PERIOD_SECONDS * 1e9;
+      await window.wasmTick();
+      paintPose();
+    } catch (error) {
+      clearInterval(timer);
+      status.textContent = `Robot stopped: ${errorText(error)}`;
+      console.error(errorText(error));
+    } finally {
+      ticking = false;
+    }
   }, PERIOD_SECONDS * 1000);
 } catch (error) {
   status.textContent = `Robot failed to start: ${errorText(error)}`;

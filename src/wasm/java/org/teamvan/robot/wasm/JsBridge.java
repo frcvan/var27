@@ -2,6 +2,7 @@ package org.teamvan.robot.wasm;
 
 import org.graalvm.webimage.api.JS;
 import org.graalvm.webimage.api.JSObject;
+import org.graalvm.webimage.api.JSString;
 import org.graalvm.webimage.api.JSValue;
 
 /**
@@ -37,32 +38,48 @@ public final class JsBridge {
    * @param path NetworkTables path
    * @return the current value, or a JS {@code undefined}
    */
+  public static JSValue ntGet(String path) {
+    return ntGet(JSString.of(path));
+  }
+
   @JS("return globalThis.wasmNtGet(path);")
-  public static native JSValue ntGet(String path);
+  private static native JSValue ntGet(JSString path);
 
   /**
-   * Publishes one telemetry value. The value must already be a JavaScript value.
+   * Publishes one numeric telemetry value.
    *
    * @param path NetworkTables path
-   * @param value JavaScript primitive, array, or plain object
+   * @param value numeric value
    */
   @JS.Coerce
   @JS("globalThis.wasmNtPut(path, value);")
   public static native void ntPut(String path, double value);
 
+  /** Publishes a number without re-encoding a cached JavaScript topic string. */
+  @JS.Coerce
+  @JS("globalThis.wasmNtPut(path, value);")
+  static native void ntPut(JSString path, double value);
+
+  /** Publishes one boolean telemetry value. */
+  @JS.Coerce
+  @JS("globalThis.wasmNtPut(path, value);")
+  static native void ntPut(JSString path, boolean value);
+
+  /** Publishes one string telemetry value. */
+  @JS.Coerce
+  @JS("globalThis.wasmNtPut(path, value);")
+  static native void ntPut(JSString path, String value);
+
   /**
    * Publishes one telemetry value. The value must already be a JavaScript value.
    *
    * @param path NetworkTables path
    * @param value JavaScript primitive, array, or plain object
    */
-  @JS("globalThis.wasmNtPut(path, value);")
-  public static native void ntPut(String path, JSValue value);
+  public static void ntPut(String path, JSValue value) {
+    ntPut(JSString.of(path), value);
+  }
 
-  /**
-   * @return true after the host sets {@code globalThis.wasmStop}
-   */
-  @JS.Coerce
-  @JS("return globalThis.wasmStop === true;")
-  public static native boolean stopped();
+  @JS("globalThis.wasmNtPut(path, value);")
+  static native void ntPut(JSString path, JSValue value);
 }

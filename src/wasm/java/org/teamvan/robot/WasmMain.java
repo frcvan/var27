@@ -17,11 +17,8 @@ import org.wpilib.command3.Scheduler;
 import org.wpilib.driverstation.DriverStation;
 
 /**
- * Wasm entry. Does not construct {@link Robot} or call {@code RobotBase.startRobot}.
- *
- * <p>The browser calls {@code wasmTick()} once per period. A blocking sleep cannot run on GitHub
- * Pages because it requires cross-origin isolation. {@link #run()} remains for a host that can
- * sleep between ticks.
+ * Wasm entry. Does not construct {@link Robot} or call {@code RobotBase.startRobot}. The browser
+ * calls {@code wasmTick()} once per period.
  */
 public final class WasmMain {
   /** Same period {@code OpModeRobot} uses. */
@@ -48,20 +45,26 @@ public final class WasmMain {
   private static native void exportStart(Runnable start);
 
   @JS(
-      args = {"tick"},
-      value = "globalThis.wasmTick = tick;")
-  private static native void exportTick(Runnable tick);
+      """
+      const engine = globalThis.wasmContinuations;
+      engine.bindTick(conversion.unproxy(tick));
+      globalThis.wasmTick = async () => {
+        try {
+          await engine.tick();
+        } catch (error) {
+          if (error instanceof WebAssembly.Exception && error.is(getExport('tag.throwable'))) {
+            throw conversion.javaToJavaScript(error);
+          }
+          throw error;
+        }
+      };
+      """)
+  private static native void exportTick(WasmMain tick);
 
   private static void exportStart() {
     exportStart(WasmMain::start);
-    exportTick(WasmMain::tick);
+    exportTick(new WasmMain());
   }
-
-  @JS.Coerce
-  @JS(
-      args = {"n"},
-      value = "console.log('MARK ' + n);")
-  public static native void marker(int n);
 
   @JS.Coerce
   @JS(
@@ -85,42 +88,33 @@ public final class WasmMain {
   }
 
   private static void build() {
-    marker(1);
     JsTelemetry.install();
-    marker(2);
     WasmRuntime.refresh();
-    marker(3);
     ModuleIOSim fl = new ModuleIOSim(TunerConstants.FrontLeft);
     ModuleIOSim fr = new ModuleIOSim(TunerConstants.FrontRight);
     ModuleIOSim bl = new ModuleIOSim(TunerConstants.BackLeft);
     ModuleIOSim br = new ModuleIOSim(TunerConstants.BackRight);
-    marker(4);
     Drive drive = new Drive(new GyroIO() {}, fl, fr, bl, br);
-    marker(5);
-    marker(50);
-    org.wpilib.driverstation.Gamepad gamepad = DriverStation.getGamepad(0);
-    marker(51);
-    org.wpilib.command3.Command command = drive.joystickDrive(gamepad);
-    marker(52);
-    drive.setDefaultCommand(command);
-    marker(6);
+    drive.setDefaultCommand(drive.joystickDrive(DriverStation.getGamepad(0)));
     manager = new Manager(drive, new Flag());
-    marker(7);
     scheduler = Scheduler.getDefault();
-    marker(8);
   }
 
   /**
    * Runs one 20 ms cycle and publishes the pose as plain numbers. The host advances {@code
    * wasmNowNanos} by {@link #PERIOD_SECONDS} between calls.
    */
-  public static void tick() {
+  public void tick() {
     if (manager == null) {
       start();
     }
     WasmRuntime.refresh();
     manager.updateInputs();
-    scheduler.run();
+    if (WasmRuntime.isEnabled()) {
+      scheduler.run();
+    } else {
+      scheduler.cancelAll();
+    }
     manager.updateOutputs();
     publishPose();
   }
@@ -131,17 +125,4 @@ public final class WasmMain {
     JsBridge.ntPut("/Sim/Pose/Y", pose.getY());
     JsBridge.ntPut("/Sim/Pose/Rotation", pose.getRotation().getRadians());
   }
-
-  /** Loops until JavaScript sets {@code wasmStop}. Not used by the browser page. */
-  public static void run() {
-    start();
-    while (!JsBridge.stopped()) {
-      tick();
-      sleepPeriod();
-    }
-  }
-
-  @JS.Coerce
-  @JS("Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);")
-  private static native void sleepPeriod();
 }

@@ -32,7 +32,11 @@ Build the project and run its tests:
 
 ## Wasm
 
-`org.teamvan.robot.WasmMain` is the Web Image entry. It does not call `RobotBase.startRobot` and does not construct `Robot`, because both load HAL. The browser calls `wasmTick()` once every 20 ms. That tick reads inputs, runs `Scheduler`, publishes outputs, and writes `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation`.
+`org.teamvan.robot.WasmMain` is the Web Image entry. It does not call `RobotBase.startRobot` or construct `Robot`, because both load HAL. Each tick reads inputs, runs the real Commands V3 `Scheduler` while enabled, publishes outputs, and writes `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation`. Disabled ticks cancel commands.
+
+`Scheduler` and `Coroutine` are unchanged. Wasm-only `Continuation` and `ContinuationScope` shadows use JavaScript Promise Integration (JSPI) to suspend and resume their Java stacks. The browser must provide `WebAssembly.Suspending` and `WebAssembly.promising`; unsupported browsers report a startup error. This does not require `SharedArrayBuffer` or cross-origin isolation.
+
+`wasmTick()` returns a Promise. Advance the host clock by 20 ms, then **await the tick before starting another one**. `web/sim/continuations.js` exports `createWasmContinuations()`; install its result as `globalThis.wasmContinuations` before `GraalVM.run()`. The native build hooks the generated module loader into this engine and fails if GraalVM changes the expected loader hook. The bridge also uses GraalVM's `conversion.unproxy()` helper; check both integration points when upgrading GraalVM.
 
 The host installs these functions on `globalThis` before calling `wasmStart()`:
 
@@ -41,9 +45,26 @@ The host installs these functions on `globalThis` before calling `wasmStart()`:
 - `wasmNtGet(path)` returns the current NetworkTables value, or `undefined`.
 - `wasmNtPut(path, value)` receives telemetry and the pose numbers.
 
+Telemetry scalars and arrays are ordinary JavaScript values. Raw, little-endian struct, and protobuf wire payloads are lowercase hex strings. Longs outside the JavaScript safe-integer range are exact decimal strings, including inside arrays. The host API does not carry timestamps or topic metadata; metadata writes do not replace topic values.
+
 `web/sim/` is the keyboard driver station. WASD drives, Q and E rotate, and Shift selects the red alliance. Pushing `main` publishes that page and the Javadoc from `.github/workflows/pages.yml`.
 
-`./gradlew nativeCompile` builds `var27.js` and `var27.js.wasm`. Desktop `./gradlew simulateJava` is unchanged.
+`./gradlew nativeCompile` builds `build/native/nativeCompile/var27.js` and `var27.js.wasm`. Use a GraalVM JDK containing Web Image and put Binaryen on `PATH`. On Windows, run this from a **VS Code x64 developer terminal**, not the default x86 developer environment, with `JAVA_HOME` pointing to that GraalVM JDK.
+
+Run the built robot and measure tick latency with a JSPI-capable Node.js or Bun:
+
+```sh
+bun tools/wasm-debug/run-wasm.mjs
+```
+
+Build and run the native behavioral smoke image for matrix/motor dynamics, telemetry wire values, and coroutine yield/resume, completion, cancellation, child awaiting, and Java exceptions:
+
+```sh
+./gradlew nativeSmokeCompile
+bun tools/wasm-debug/run-smoke.mjs
+```
+
+Desktop `./gradlew simulateJava` is unchanged.
 
 ## Debug mode
 

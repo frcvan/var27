@@ -24,17 +24,46 @@ sourceSets {
         runtimeClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.runtimeClasspath
     }
+    wasmTest {
+        compileClasspath += sourceSets.wasm.output
+        compileClasspath += sourceSets.wasm.compileClasspath
+        runtimeClasspath += sourceSets.wasm.runtimeClasspath
+    }
 }
 
 graalvmNative {
     binaries {
         named("main") {
-            imageName.set("var27")
+            imageName.set("wasm")
             // Put the wasm shadow sources ahead of the main runtime classpath so our shims
             // (e.g. com.ctre.phoenix6.CANBus) win over the JNI-backed vendor classes.
             classpath.setFrom(sourceSets.wasm.runtimeClasspath)
             mainClass.set("org.teamvan.robot.WasmMain")
             buildArgs.addAll("--tool:svm-wasm", "-H:+UnlockExperimentalVMOptions", "-H:-AutoRunVM")
+        }
+        create("smoke") {
+            imageName.set("wasm")
+            classpath.setFrom(sourceSets.wasmTest.runtimeClasspath)
+            mainClass.set("org.teamvan.robot.wasm.WasmSmoke")
+            buildArgs.addAll("--tool:svm-wasm", "-H:+UnlockExperimentalVMOptions", "-H:-AutoRunVM")
+        }
+    }
+}
+
+// JSPI wraps only continuation suspension imports, before the generated image is instantiated.
+[
+    'nativeCompile',
+    'nativeSmokeCompile'
+].each { taskName ->
+    tasks.named(taskName) {
+        doLast {
+            def script = layout.buildDirectory.file("native/${taskName}/wasm.js").get().asFile
+            def source = script.getText('UTF-8')
+            def call = 'await WebAssembly.instantiate(file, wasmImports)'
+            if (source.indexOf(call) < 0 || source.indexOf(call) != source.lastIndexOf(call)) {
+                throw new GradleException('GraalVM Web Image instantiate hook changed; update JSPI integration.')
+            }
+            script.setText(source.replace(call, 'await globalThis.wasmContinuations.instantiate(file, wasmImports)'), 'UTF-8')
         }
     }
 }
