@@ -32,37 +32,20 @@ Build the project and run its tests:
 
 ## Wasm
 
-`org.teamvan.robot.WasmMain` is the Web Image entry. It does not call `RobotBase.startRobot` or construct `Robot`, because both load HAL. Each tick reads inputs, runs the real Commands V3 `Scheduler` while enabled, publishes outputs, and writes `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation`. Disabled ticks cancel commands.
+WASM support is provided by the independent [`wpilib-wasm` library](wpilib-wasm/README.md), consumed through `pluginManagement.includeBuild('wpilib-wasm')` and the `org.teamvan.wpilib-wasm` Gradle plugin. The library owns the runtime/shadows, JSPI engine, native build configuration, browser assets, and smoke suite.
 
-`Scheduler` and `Coroutine` are unchanged. Wasm-only `Continuation` and `ContinuationScope` shadows use JavaScript Promise Integration (JSPI) to suspend and resume their Java stacks. The browser must provide `WebAssembly.Suspending` and `WebAssembly.promising`; unsupported browsers report a startup error. This does not require `SharedArrayBuffer` or cross-origin isolation.
+This robot keeps only [`src/wasm/java/org/teamvan/robot/WasmMain.java`](src/wasm/java/org/teamvan/robot/WasmMain.java): its simulation IO, manager/default-command wiring, and existing numeric `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation` publication. Struct publishing and the real Commands V3 Scheduler behavior are unchanged.
 
-`wasmTick()` returns a Promise. Advance the host clock by 20 ms, then **await the tick before starting another one**. `web/sim/continuations.js` exports `createWasmContinuations()`; install its result as `globalThis.wasmContinuations` before `GraalVM.run()`. The native build hooks the generated module loader into this engine and fails if GraalVM changes the expected loader hook. The bridge also uses GraalVM's `conversion.unproxy()` helper; check both integration points when upgrading GraalVM.
-
-The host installs these functions on `globalThis` before calling `wasmStart()`:
-
-- `wasmNowNanos()` returns monotonic time in nanoseconds.
-- `wasmDs()` returns `{enabled, alliance, leftX, leftY, rightX}`. `alliance` is `"red"` or `"blue"`.
-- `wasmNtGet(path)` returns the current NetworkTables value, or `undefined`.
-- `wasmNtPut(path, value)` receives telemetry and the pose numbers.
-
-Telemetry scalars and arrays are ordinary JavaScript values. Raw, little-endian struct, and protobuf wire payloads are lowercase hex strings. Longs outside the JavaScript safe-integer range are exact decimal strings, including inside arrays. The host API does not carry timestamps or topic metadata; metadata writes do not replace topic values.
-
-`web/sim/` is the keyboard driver station. WASD drives, Q and E rotate, and Shift selects the red alliance. Pushing `main` publishes that page and the Javadoc from `.github/workflows/pages.yml`.
-
-`./gradlew nativeCompile` builds `build/native/nativeCompile/var27.js` and `var27.js.wasm`. Use a GraalVM JDK containing Web Image and put Binaryen on `PATH`. On Windows, run this from a **VS Code x64 developer terminal**, not the default x86 developer environment, with `JAVA_HOME` pointing to that GraalVM JDK.
-
-Run the built robot and measure tick latency with a JSPI-capable Node.js or Bun:
+Use the Web Image GraalVM JDK from Downloads as `JAVA_HOME`/`GRAALVM_HOME`. On Windows, build from the **VS Code x64 developer environment** with Binaryen on `PATH`. Run:
 
 ```sh
-bun tools/wasm-debug/run-wasm.mjs
+./gradlew wasmRun wasmSmoke wasmSite
+python -m http.server 8099 --directory build/wasm/site
 ```
 
-Build and run the native behavioral smoke image for matrix/motor dynamics, telemetry wire values, and coroutine yield/resume, completion, cancellation, child awaiting, and Java exceptions:
+Open `http://localhost:8099/sim/`. WASD drives, Q/E rotate, and Shift selects red alliance. A JSPI-capable browser is required. The staged frontend and native files come entirely from the library. `nativeCompile` and `nativeSmokeCompile` remain available; the image basename is `wasm`.
 
-```sh
-./gradlew nativeSmokeCompile
-bun tools/wasm-debug/run-smoke.mjs
-```
+The [library integration guide](wpilib-wasm/README.md) covers adding support to arbitrary Commands V3 robots, published-plugin consumption, lifecycle adapters, supported APIs, host telemetry, and the independent non-drive example. Pushing `main` publishes the staged simulator and Javadoc through `.github/workflows/pages.yml`.
 
 Desktop `./gradlew simulateJava` is unchanged.
 

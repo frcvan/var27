@@ -4,72 +4,16 @@ plugins {
     id "org.wpilib.GradleRIO" version "2027.0.0-alpha-7"
     id "com.peterabeles.gversion" version "1.10"
     id "com.diffplug.spotless" version "8.6.0"
-    id 'org.graalvm.buildtools.native' version '1.1.14'
+    id 'org.teamvan.wpilib-wasm'
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
-sourceSets {
-    wasm {
-        java {
-            srcDir 'src/wasm/java'
-        }
-        resources {
-            srcDir 'src/wasm/resources'
-        }
-        compileClasspath += sourceSets.main.output
-        compileClasspath += sourceSets.main.compileClasspath
-        runtimeClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.runtimeClasspath
-    }
-    wasmTest {
-        compileClasspath += sourceSets.wasm.output
-        compileClasspath += sourceSets.wasm.compileClasspath
-        runtimeClasspath += sourceSets.wasm.runtimeClasspath
-    }
-}
-
-graalvmNative {
-    binaries {
-        named("main") {
-            imageName.set("wasm")
-            // Put the wasm shadow sources ahead of the main runtime classpath so our shims
-            // (e.g. com.ctre.phoenix6.CANBus) win over the JNI-backed vendor classes.
-            classpath.setFrom(sourceSets.wasm.runtimeClasspath)
-            mainClass.set("org.teamvan.robot.WasmMain")
-            buildArgs.addAll("--tool:svm-wasm", "-H:+UnlockExperimentalVMOptions", "-H:-AutoRunVM")
-        }
-        create("smoke") {
-            imageName.set("wasm")
-            classpath.setFrom(sourceSets.wasmTest.runtimeClasspath)
-            mainClass.set("org.teamvan.robot.wasm.WasmSmoke")
-            buildArgs.addAll("--tool:svm-wasm", "-H:+UnlockExperimentalVMOptions", "-H:-AutoRunVM")
-        }
-    }
-}
-
-// JSPI wraps only continuation suspension imports, before the generated image is instantiated.
-[
-    'nativeCompile',
-    'nativeSmokeCompile'
-].each { taskName ->
-    tasks.named(taskName) {
-        doLast {
-            def script = layout.buildDirectory.file("native/${taskName}/wasm.js").get().asFile
-            def source = script.getText('UTF-8')
-            def call = 'await WebAssembly.instantiate(file, wasmImports)'
-            if (source.indexOf(call) < 0 || source.indexOf(call) != source.lastIndexOf(call)) {
-                throw new GradleException('GraalVM Web Image instantiate hook changed; update JSPI integration.')
-            }
-            script.setText(source.replace(call, 'await globalThis.wasmContinuations.instantiate(file, wasmImports)'), 'UTF-8')
-        }
-    }
-}
-
-tasks.named('processWasmResources') {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+wpilibWasm {
+    mainClass.set('org.teamvan.robot.WasmMain')
+    verifyDrive.set(true)
 }
 repositories {
     mavenCentral()
@@ -232,11 +176,6 @@ jar {
     from('build.gradle') { into 'backup' }
 }
 
-// Configure string concat to always inline compile
-tasks.withType(JavaCompile) {
-    options.compilerArgs.add '-XDstringConcat=inline'
-    options.compilerArgs.add '-parameters'
-}
 
 def vendorDependencyCoordinates = fileTree('vendordeps')
         .matching { include '**/*.json' }

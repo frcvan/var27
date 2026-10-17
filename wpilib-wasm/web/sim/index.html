@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WPILib WASM Sim</title>
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <main class="sim">
+      <h1>WPILib WASM Sim</h1>
+      <p class="status" id="status">Loading robot…</p>
+      <dl>
+        <dt>X</dt>
+        <dd id="x">0.000 m</dd>
+        <dt>Y</dt>
+        <dd id="y">0.000 m</dd>
+        <dt>Rotation</dt>
+        <dd id="rotation">0.00°</dd>
+      </dl>
+      <div class="keys" aria-label="Keyboard gamepad">
+        <kbd id="key-w">W</kbd>
+        <kbd id="key-a">A</kbd>
+        <kbd id="key-s">S</kbd>
+        <kbd id="key-d">D</kbd>
+        <kbd id="key-q">Q</kbd>
+        <kbd id="key-e">E</kbd>
+      </div>
+      <p>WASD drives. Q and E rotate. Hold Shift for the red alliance.</p>
+    </main>
+    <script type="module" src="sim.js"></script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+import org.gradle.internal.os.OperatingSystem
+
+pluginManagement {
+    repositories {
+        String wpilibYear = '2027_alpha7'
+        File wpilibHome
+        def os = OperatingSystem.current()
+        if (os.isWindows()) {
+            wpilibHome = new File(System.getenv('PUBLIC') ?: 'C:\\Users\\Public', "wpilib/${wpilibYear}")
+        } else if (os.isLinux()) {
+            String dataHome = System.getenv('XDG_DATA_HOME')
+            if (dataHome == null || dataHome.trim().isEmpty() || !new File(dataHome).isAbsolute()) {
+                dataHome = new File(System.getProperty('user.home'), '.local/share').path
+            }
+            wpilibHome = new File(dataHome, "wpilib/${wpilibYear}")
+        } else {
+            wpilibHome = new File(System.getProperty('user.home'), ".wpilib/${wpilibYear}")
+        }
+        maven {
+            name = 'wpilibHome'
+            url = new File(wpilibHome, 'maven')
+        }
+        mavenLocal()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'commands-v3-wasm-example'

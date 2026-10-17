@@ -1,0 +1,58 @@
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = 'org.teamvan.wpilibwasm'
+version = '0.1.0'
+description = 'Source-bundled WPILib runtime and tooling for GraalVM Web Image.'
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation localGroovy()
+    implementation 'org.graalvm.buildtools:native-gradle-plugin:1.1.14'
+}
+
+gradlePlugin {
+    plugins {
+        wpilibWasm {
+            id = 'org.teamvan.wpilib-wasm'
+            implementationClass = 'org.teamvan.wpilibwasm.WpilibWasmPlugin'
+            displayName = 'WPILib WASM'
+            description = project.description
+        }
+    }
+}
+
+java {
+    withSourcesJar()
+}
+
+// Runtime sources are deliberately not part of this build's Java source sets:
+// the consuming robot compiles them against its own WPILib and vendor versions.
+def bundleWasmLibrary = tasks.register('bundleWasmLibrary', Zip) {
+    description = 'Bundles the reusable runtime sources, smoke sources, frontend, and tools.'
+    archiveFileName = 'library.zip'
+    destinationDirectory = layout.buildDirectory.dir('generated/wasm-library')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+
+    from('src/runtime/java') { into 'runtime/java' }
+    from('src/runtime/resources') { into 'runtime/resources' }
+    from('src/smoke/java') { into 'tests/java' }
+    from('web') { into 'web' }
+    from('tools') { into 'tools' }
+    from('WPILib-License.md') { into 'licenses' }
+}
+
+tasks.named('processResources') {
+    from(bundleWasmLibrary.flatMap { it.archiveFile }) {
+        into 'org/teamvan/wpilibwasm'
+    }
+}

@@ -44,18 +44,15 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Build Javadoc
         run: ./gradlew javadoc -x spotlessCheck -x spotlessApply
-      - name: Build WASM sim
-        run: ./gradlew nativeCompile -x spotlessCheck -x spotlessApply
+      - name: Build WASM site with the library
+        run: ./gradlew wasmSite -x spotlessCheck -x spotlessApply
       - name: Assemble site
         run: |
           site="$RUNNER_TEMP/site"
           mkdir -p "$site/javadoc" "$site/sim"
           cp -R build/docs/javadoc/. "$site/javadoc/"
           cp -R web/. "$site/"
-          wasm="$(find build/native -type f -name '*.js.wasm' | head -n 1)"
-          js="${wasm%.wasm}"
-          cp "$js" "$site/sim/wasm.js"
-          cp "$wasm" "$site/sim/wasm.js.wasm"
+          cp -R build/wasm/site/. "$site/"
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
