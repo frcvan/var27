@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wasmbot Telemetry</title>
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <main class="sim">
+      <h1>Wasmbot Telemetry</h1>
+      <p class="status" id="status">Loading robot…</p>
+      <label><input id="enabled" type="checkbox" /> Enabled</label>
+      <h2>Telemetry</h2>
+      <p id="no-telemetry">No telemetry published yet.</p>
+      <table>
+        <thead><tr><th scope="col">Path</th><th scope="col">Value</th></tr></thead>
+        <tbody id="telemetry"></tbody>
+      </table>
+      <div class="keys" aria-label="Keyboard gamepad">
+        <kbd id="key-w">W</kbd>
+        <kbd id="key-a">A</kbd>
+        <kbd id="key-s">S</kbd>
+        <kbd id="key-d">D</kbd>
+        <kbd id="key-q">Q</kbd>
+        <kbd id="key-e">E</kbd>
+      </div>
+      <p>W/S: left Y. A/D: left X. Q/E: right X. Hold Shift for the red alliance.</p>
+    </main>
+    <script type="module" src="sim.js"></script>
+  </body>
+</html>

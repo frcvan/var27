@@ -30,24 +30,26 @@ Build the project and run its tests:
 ./gradlew test
 ```
 
-## Wasm
+## Wasmbot
 
-WASM support is provided by the independent [`wpilib-wasm` library](wpilib-wasm/README.md), consumed through `pluginManagement.includeBuild('wpilib-wasm')` and the `org.teamvan.wpilib-wasm` Gradle plugin. The library owns the runtime/shadows, JSPI engine, native build configuration, browser assets, and smoke suite.
+WASM support comes from the independent [`wasmbot` plugin](wasmbot/README.md). The plugin ID and extension are both `wasmbot`, and the runtime package is `org.teamvan.wasmbot`.
 
-This robot keeps only [`src/wasm/java/org/teamvan/robot/WasmMain.java`](src/wasm/java/org/teamvan/robot/WasmMain.java): its simulation IO, manager/default-command wiring, and existing numeric `/Sim/Pose/X`, `/Sim/Pose/Y`, and `/Sim/Pose/Rotation` publication. Struct publishing and the real Commands V3 Scheduler behavior are unchanged.
+[`WasmMain`](src/wasm/java/org/teamvan/robot/WasmMain.java) only calls `RobotBase.startRobot(Robot::new)`, just like the normal WPILib entry point. Both targets use the same [`Robot`](src/main/java/org/teamvan/robot/Robot.java), its constructor, and `robotPeriodic()`. The shared robot method owns its real scheduler run/cancel policy; the runtime does not run a second scheduler or duplicate the robot's IO wiring.
 
-Use the Web Image GraalVM JDK from Downloads as `JAVA_HOME`/`GRAALVM_HOME`. On Windows, build from the **VS Code x64 developer environment** with Binaryen on `PATH`. Run:
+Check `Constants.isWasm()` in shared robot code. Its implementation is the standard Java `Boolean.getBoolean("wasmbot")`, so desktop and hardware builds need no Wasmbot classes on their classpath. Wasmbot sets the property before constructing the robot; it is false by default outside WASM.
+
+Use the Web Image GraalVM JDK from Downloads as `JAVA_HOME`/`GRAALVM_HOME`. On Windows, build from the **VS Code x64 developer environment** with Binaryen on `PATH`:
 
 ```sh
 ./gradlew wasmRun wasmSmoke wasmSite
 python -m http.server 8099 --directory build/wasm/site
 ```
 
-Open `http://localhost:8099/sim/`. WASD drives, Q/E rotate, and Shift selects red alliance. A JSPI-capable browser is required. The staged frontend and native files come entirely from the library. `nativeCompile` and `nativeSmokeCompile` remain available; the image basename is `wasm`.
+Open `http://localhost:8099/sim/` in a JSPI-capable browser. The generic telemetry viewer starts disabled; use its Enabled checkbox. W/S, A/D, and Q/E provide the three virtual gamepad axes, and Shift selects red alliance. It displays all published telemetry rather than depending on special Pose channels. The existing struct/protobuf wire format is unchanged.
 
-The [library integration guide](wpilib-wasm/README.md) covers adding support to arbitrary Commands V3 robots, published-plugin consumption, lifecycle adapters, supported APIs, host telemetry, and the independent non-drive example. Pushing `main` publishes the staged simulator and Javadoc through `.github/workflows/pages.yml`.
+The [Wasmbot guide](wasmbot/README.md) documents plugin installation, ordinary Robot startup, lifecycle behavior, dependency-free detection, supported APIs, hosting, native smokes, and the independent published-plugin example. Pushing `main` publishes the staged viewer and Javadoc through `.github/workflows/pages.yml`.
 
-Desktop `./gradlew simulateJava` is unchanged.
+Desktop `./gradlew simulateJava` keeps the normal WPILib entry point and classpath.
 
 ## Debug mode
 

@@ -1,7 +1,7 @@
 import org.gradle.internal.os.OperatingSystem
 
 pluginManagement {
-    includeBuild('wpilib-wasm')
+    includeBuild('wasmbot')
     repositories {
         String wpilibYear = '2027_alpha7'
         File wpilibHome

@@ -12,6 +12,7 @@ import org.teamvan.robot.mechanisms.flag.Flag;
 import org.teamvan.robot.util.Profiler;
 import org.wpilib.command3.Scheduler;
 import org.wpilib.command3.button.CommandGamepad;
+import org.wpilib.driverstation.RobotState;
 import org.wpilib.framework.OpModeRobot;
 
 public class Robot extends OpModeRobot {
@@ -75,7 +76,11 @@ public class Robot extends OpModeRobot {
   public void robotPeriodic() {
     // Read hardware and integrate odometry before running commands
     manager.updateInputs();
-    Scheduler.getDefault().run();
+    if (RobotState.isEnabled()) {
+      Scheduler.getDefault().run();
+    } else {
+      Scheduler.getDefault().cancelAll();
+    }
     // Publish telemetry after commands have written their outputs
     manager.updateOutputs();
   }

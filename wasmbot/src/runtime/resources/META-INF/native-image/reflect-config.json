@@ -1,0 +1,152 @@
+[
+  {
+    "name": "org.wpilib.units.AccelerationUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.AngleUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.AngularAccelerationUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.AngularMomentumUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.AngularVelocityUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.CurrentUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.DimensionlessUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.DistanceUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.EnergyUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.ForceUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.FrequencyUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.LinearAccelerationUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.LinearMomentumUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.LinearVelocityUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.MassUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.MomentOfInertiaUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.MultUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.PerUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.PowerUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.ResistanceUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.TemperatureUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.TimeUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.TorqueUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.VelocityUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.units.VoltageUnit",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.wpilib.math.geometry.Rotation2d",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.geometry.Pose2d",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.kinematics.SwerveModuleVelocity",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.math.kinematics.ChassisVelocities",
+    "fields": [
+      {
+        "name": "struct"
+      }
+    ]
+  },
+  {
+    "name": "org.teamvan.wasmbot.WasmApplication",
+    "methods": [
+      {
+        "name": "tick",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "org.wpilib.command3.Continuation",
+    "methods": [
+      {
+        "name": "wasmContinuationBody",
+        "parameterTypes": []
+      }
+    ]
+  }
+]

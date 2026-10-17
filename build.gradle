@@ -4,16 +4,15 @@ plugins {
     id "org.wpilib.GradleRIO" version "2027.0.0-alpha-7"
     id "com.peterabeles.gversion" version "1.10"
     id "com.diffplug.spotless" version "8.6.0"
-    id 'org.teamvan.wpilib-wasm'
+    id 'wasmbot'
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
-wpilibWasm {
+wasmbot {
     mainClass.set('org.teamvan.robot.WasmMain')
-    verifyDrive.set(true)
 }
 repositories {
     mavenCentral()
@@ -174,6 +173,11 @@ jar {
     from('src') { into 'backup/src' }
     from('vendordeps') { into 'backup/vendordeps' }
     from('build.gradle') { into 'backup' }
+}
+
+// Configure string concat to always inline compile
+tasks.withType(JavaCompile) {
+    options.compilerArgs.add '-XDstringConcat=inline'
 }
 
 

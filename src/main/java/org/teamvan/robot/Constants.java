@@ -11,6 +11,11 @@ public final class Constants {
   public static final Mode simMode = Mode.SIM;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
 
+  /** True only after Wasmbot startup; uses standard Java and needs no WASM classpath dependency. */
+  public static boolean isWasm() {
+    return Boolean.getBoolean("wasmbot");
+  }
+
   public static enum Mode {
     /** Running on a real robot. */
     REAL,

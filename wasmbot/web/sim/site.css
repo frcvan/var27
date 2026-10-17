@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Segoe UI", sans-serif;
+  background: canvas;
+  color: canvastext;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 42rem;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+a {
+  color: linktext;
+}
+
+.sim {
+  max-width: 60rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid graytext;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+tbody th {
+  font-weight: normal;
+  color: graytext;
+}
+
+td {
+  white-space: pre-wrap;
+}
+
+.keys {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+kbd {
+  min-width: 2.5rem;
+  padding: 0.7rem 0;
+  border: 1px solid graytext;
+  border-radius: 0.4rem;
+  text-align: center;
+}
+
+kbd.active {
+  background: canvastext;
+  color: canvas;
+}
+
+.status {
+  min-height: 1.5rem;
+  color: graytext;
+}
